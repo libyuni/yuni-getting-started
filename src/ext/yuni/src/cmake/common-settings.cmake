@@ -43,9 +43,15 @@ endmacro()
 #
 # Clang Detection
 #
-if (CMAKE_CXX_COMPILER MATCHES ".*clang")
+check_cxx_source_compiles("
+	#ifndef __clang__
+	will never compile !
+	#endif
+	int main() {return 0;}" YUNI_COMPILER_IS_CLANG)
+if ("${YUNI_COMPILER_IS_CLANG}")
 	set(CLANG 1)
-endif ()
+endif()
+
 
 #
 # Getting the folder where this file is located
@@ -94,7 +100,8 @@ if(NOT MSVC)
 			endif()
 		endif()
 	endif()
-	if (YUNI_HAS_LIB_CPP11_SUPPORT)
+	if (YUNI_HAS_LIB_CPP11_SUPPORT AND (NOT CLANG OR APPLE))
+		# clang seems to not like the option -stdlib, but required on MacOS...
 		set(YUNI_COMMON_CXX_OPTIONS  "${YUNI_COMMON_CXX_OPTIONS} -stdlib=libc++")
 	endif()
 
@@ -175,13 +182,16 @@ endif()
 
 if (NOT MSVC)
 	# Optimisation
-	compile_flag("-O3"                   O3  RELEASE)
-	compile_flag("-fomit-frame-pointer"  FOMIT_FRAME_POINTER  RELEASE RELWITHDEBINFO)
-	compile_flag("-fstrict-aliasing"     STRICT_ALIASING      RELEASE RELWITHDEBINFO)
-	compile_flag("-msse"                 MSSE                 RELEASE RELWITHDEBINFO)
-	compile_flag("-msse2"                MSSE2                RELEASE RELWITHDEBINFO)
-	compile_flag("-fvisibility=hidden"   VISIBILITY_HIDDEN    RELEASE DEBUG RELWITHDEBINFO)
+	compile_flag("-O3"                       O3  RELEASE)
+	compile_flag("-fomit-frame-pointer"      FOMIT_FRAME_POINTER  RELEASE RELWITHDEBINFO)
+	compile_flag("-fstrict-aliasing"         STRICT_ALIASING      RELEASE RELWITHDEBINFO)
+	compile_flag("-msse"                     MSSE                 RELEASE RELWITHDEBINFO)
+	compile_flag("-msse2"                    MSSE2                RELEASE RELWITHDEBINFO)
+	compile_flag("-fvisibility=hidden"       VISIBILITY_HIDDEN    RELEASE DEBUG RELWITHDEBINFO)
 	#compile_flag("-mfpmath=sse"          FPMATH_MSSE          RELEASE RELWITHDEBINFO)
+	if (NOT "${CLANG}")
+		compile_flag("-fdiagnostics-color=auto"  DIAG_COLORS      RELEASE DEBUG RELWITHDEBINFO)
+	endif()
 
 	# link
 	#compile_flag("-flto"                 FLTO  RELEASE RELWITHDEBINFO)
